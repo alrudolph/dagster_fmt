@@ -1,21 +1,18 @@
-from dagster import (
-    op,
-    In,
-    Output,
-    Field,
-    Out,
-    Any,
-    Nothing,
-    DynamicOutput,
-    DynamicOut,
-    AssetMaterialization,
-    OpExecutionContext,
-)
+from dagster import AssetMaterialization, DynamicOutput, In, Output, op
 
 
 @op
 def some_op(context, a: str, b):
-    """ """
+    """hello there"""
+    c = context.op_config["c_field"]
+    context.resources.redshift(a, b, c)
+
+    return 1, 2
+
+
+@op
+def some_op(context, a: str, b):
+    """hello there"""
     c = context.op_config["c_field"]
     context.resources.redshift(a, b, c)
 
@@ -24,8 +21,10 @@ def some_op(context, a: str, b):
 
 @op
 def some_op1(context, a: str, b):
+    context.log.info("hello")
+
     c = context.op_config["c_field"]
-    context.resources.redshift(a, b, c)
+    context.resources.some_resource(a, b, c)
 
     return Output(1, output_name="a")
 

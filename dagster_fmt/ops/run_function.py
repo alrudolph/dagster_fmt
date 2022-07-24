@@ -1,10 +1,11 @@
 import ast
-from typing import Optional, Any
+from typing import Any, Optional
+
 from shared.insert import InsertText
 
 
 def add_context_type_annotation(
-    function_node: ast.FunctionDef, type_name: str = "OpExecutionContext"
+    function_node: ast.FunctionDef, first_node, type_name: str = "OpExecutionContext"
 ) -> Optional[Any]:
     """Add the type annotation to optional context param in the op's execution function.
 
@@ -34,9 +35,9 @@ def add_context_type_annotation(
         possible_context_arg.arg == "context"
         and possible_context_arg.annotation is None
     ):
-        return InsertText.after_node(f": {type_name}", possible_context_arg), (
-            "dagster",
-            type_name,
+        return (
+            InsertText.after_node(f": {type_name}", possible_context_arg),
+            InsertText.before_node(f"from dagster import {type_name}\n", first_node),
         )
 
 
@@ -45,31 +46,31 @@ def type_out_resources():
     convert
     -------
 
-    context.resources.redshift(a, b, c)
+    context.resources.redshift.method(a, b, c)
 
     to
     --
 
     redshift: Any = context.resources.redshift
-    redshift(a, b c)
+
+    redshift.method(a, b c)
     """
 
 
-def destructor_context():
-    """
-    convert
-    -------
-
-    context.op_config["a"]
-
-    to
-    --
-
-    a = context.op_config["a"]
-    a
-
-    """
+# if no return type in function signature, then add? or add to the `out` section?
 
 
-def add_op_docstring():
-    ...
+def add_op_docstring(node):
+    n_body = node.body[0]
+
+    if (
+        isinstance(n_body, ast.Expr)
+        and isinstance(n_body.value, ast.Constant)
+        and isinstance(n_body.value.value, str)
+    ):
+        if n_body.value.value.endswith("\n"):
+            return
+
+        return InsertText.after_node("\n", n_body)
+
+    return InsertText.before_node('"""Op description"""\n', n_body, newline=True)
