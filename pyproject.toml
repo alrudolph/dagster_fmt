@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "dagster_fmt"
-version = "0.0.0"
+version = "0.0.1"
 description = "Dagster code gen tool"
 authors = ["arudolph <alex3rudolph@gmail.com>"]
 

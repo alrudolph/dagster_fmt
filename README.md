@@ -2,7 +2,7 @@
 
 Create an execution function and have `dagster_fmt` fill out the decorator arguments.
 
-> Disclaimer: This project is not affiliated with Elementl or Dagster.
+> Disclaimer: This project is not affiliated with Dagster.
 
 ## Example
 

@@ -1,4 +1,4 @@
-from dagster import AssetMaterialization, DynamicOutput, In, Output, op
+from dagster import AssetMaterialization, DynamicOutput, In, Output, op, resource
 
 
 @op
@@ -51,3 +51,8 @@ def some_op2(context):
 
 def some_other_func():
     ...
+
+
+@resource
+def some_resource(context):
+    return {"a": context.resource_config["token"]}

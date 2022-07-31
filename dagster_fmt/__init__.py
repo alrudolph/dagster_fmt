@@ -3,6 +3,11 @@ import os
 import subprocess
 from pathlib import Path
 
+from dagster_fmt.resources import (
+    add_resource_decorator,
+    add_resource_docstring,
+    is_resource_node,
+)
 from ops import add_op_decorator, is_op_node
 from ops.run_function import add_context_type_annotation, add_op_docstring
 from shared.insert import write_file
@@ -21,28 +26,35 @@ def run_on_file(file_name, config):
 
     for node in ast.walk(tree):
 
-        if not is_op_node(node):
-            continue
-
-        #
-        # TODO: LOOK AT RESOURCE DEFS, SENSORS, etc...
-        #
-
-        # astpretty.pprint(node)
-        # build_op(node)
-
-        output = add_context_type_annotation(node, first_node)
-
-        if output is not None:
-            inserts.extend(output)
-
-        if config.ops.add_docstrings:
-            output = add_op_docstring(node)
+        if is_op_node(node):
+            output = add_context_type_annotation(node, first_node)
 
             if output is not None:
-                inserts.append(output)
+                inserts.extend(output)
 
-        inserts.extend(add_op_decorator(node, config, first_node))
+            if config.ops.add_docstrings:
+                output = add_op_docstring(node)
+
+                if output is not None:
+                    inserts.append(output)
+
+            inserts.extend(add_op_decorator(node, config, first_node))
+
+        elif is_resource_node(node):
+            output = add_context_type_annotation(
+                node, first_node, type_name="InitResourceContext"
+            )
+
+            if output is not None:
+                inserts.extend(output)
+
+            if config.resources.add_docstrings:
+                output = add_resource_docstring(node)
+
+                if output is not None:
+                    inserts.append(output)
+
+            inserts.extend(add_resource_decorator(node, config, first_node))
 
     write_file(file_name, file_contents, inserts)
     subprocess.run(["isort", file_name])
