@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import List
+from typing import Any, Callable, Dict, Generic, List, TypeVar
 
 
 class InsertText:
@@ -18,7 +18,11 @@ class InsertText:
         return cls(text, node.lineno - 1, node.end_col_offset, newline)
 
 
-def grouped(list, key):
+VT = TypeVar("VT")
+KT = TypeVar("KT")
+
+
+def sorted_groups(list: List[VT], key: Callable[[VT], KT]) -> Dict[KT, List[VT]]:
     output = defaultdict(lambda: [])
 
     for item in list:
@@ -27,11 +31,11 @@ def grouped(list, key):
     return {k: output[k] for k in sorted(output.keys())}
 
 
-def write_file(file_path: str, starting_text: str, inserts=List[InsertText]):
+def write_file(file_path: str, starting_text: str, inserts: List[InsertText]):
     lines = starting_text.splitlines()
     line_acc = 0
 
-    for _lineno, line_inserts in grouped(inserts, key=lambda x: x.lineno).items():
+    for _lineno, line_inserts in sorted_groups(inserts, key=lambda x: x.lineno).items():
 
         col_acc = 0
 

@@ -59,11 +59,13 @@ class ResourceConfiguration(Config):
 class Configuration:
     def __init__(self, global_config, op_config, resources_config):
         self.ops = OpConfiguration(global_config, op_config)
-        self.resources = ResourceConfiguration(global_config, resources_config)
+        self.resources: ResourceConfiguration = ResourceConfiguration(
+            global_config, resources_config
+        )
 
     @classmethod
     def from_pyproject(cls):
-        with open("./pyproject.toml", "r", encoding="utf8") as file:
+        with open("../pyproject.toml", "r", encoding="utf8") as file:
             contents = toml.load(file)
 
         if "dagster_fmt" not in contents.get("tool", {}):

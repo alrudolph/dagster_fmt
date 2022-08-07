@@ -3,15 +3,13 @@ import os
 import subprocess
 from pathlib import Path
 
-from dagster_fmt.resources import (
-    add_resource_decorator,
-    add_resource_docstring,
-    is_resource_node,
-)
-from ops import add_op_decorator, is_op_node
-from ops.run_function import add_context_type_annotation, add_op_docstring
-from shared.insert import write_file
-from tool.schema import Configuration
+from dagster_fmt.ops import add_op_decorator
+from dagster_fmt.ops.run_function import add_context_type_annotation
+from dagster_fmt.resources import add_resource_decorator
+from dagster_fmt.shared.create_decorator import is_node
+from dagster_fmt.shared.docstrings import add_docstring
+from dagster_fmt.shared.insert import write_file
+from dagster_fmt.tool.schema import Configuration
 
 
 def run_on_file(file_name, config):
@@ -26,21 +24,21 @@ def run_on_file(file_name, config):
 
     for node in ast.walk(tree):
 
-        if is_op_node(node):
+        if is_node("op", node):
             output = add_context_type_annotation(node, first_node)
 
             if output is not None:
                 inserts.extend(output)
 
             if config.ops.add_docstrings:
-                output = add_op_docstring(node)
+                output = add_docstring("Op description", node)
 
                 if output is not None:
                     inserts.append(output)
 
             inserts.extend(add_op_decorator(node, config, first_node))
 
-        elif is_resource_node(node):
+        elif is_node("resource", node):
             output = add_context_type_annotation(
                 node, first_node, type_name="InitResourceContext"
             )
@@ -49,7 +47,7 @@ def run_on_file(file_name, config):
                 inserts.extend(output)
 
             if config.resources.add_docstrings:
-                output = add_resource_docstring(node)
+                output = add_docstring("Resource description", node)
 
                 if output is not None:
                     inserts.append(output)

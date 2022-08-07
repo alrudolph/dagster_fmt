@@ -1,13 +1,17 @@
 import ast
 from typing import Any, Optional
 
-from shared.insert import InsertText
+from dagster_fmt.shared.docstrings import add_docstring
+from dagster_fmt.shared.insert import InsertText
 
 
 def add_context_type_annotation(
-    function_node: ast.FunctionDef, first_node, type_name: str = "OpExecutionContext"
+    function_node: ast.FunctionDef,
+    first_node,
+    type_name: str = "OpExecutionContext",
 ) -> Optional[Any]:
-    """Add the type annotation to optional context param in the op's execution function.
+    """Add the type annotation to optional context param in the op's execution
+    function.
 
     For example,
 
@@ -23,8 +27,8 @@ def add_context_type_annotation(
     Returns
     -------
     dagster_import_name: Optional[Any]
-        If an annotation is added, the name of the module and name of the class to
-        add an import for. In this case: ('dagster', 'OpExecutionContext')
+        If an annotation is added, the name of the module and name of the class
+        to add an import for. In this case: ('dagster', 'OpExecutionContext')
     """
     if len(function_node.args.args) == 0:
         return
@@ -55,22 +59,3 @@ def type_out_resources():
 
     redshift.method(a, b c)
     """
-
-
-# if no return type in function signature, then add? or add to the `out` section?
-
-
-def add_op_docstring(node):
-    n_body = node.body[0]
-
-    if (
-        isinstance(n_body, ast.Expr)
-        and isinstance(n_body.value, ast.Constant)
-        and isinstance(n_body.value.value, str)
-    ):
-        if n_body.value.value.endswith("\n"):
-            return
-
-        return InsertText.after_node("\n", n_body)
-
-    return InsertText.before_node('"""Op description"""\n', n_body, newline=True)

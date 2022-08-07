@@ -3,8 +3,23 @@ from typing import List
 
 
 def get_config_field_names(
-    config_name: str, function_node: ast.FunctionDef
+    config_name: str,
+    function_node: ast.FunctionDef,
 ) -> List[str]:
+    """Get the keys of the context's config dictionary.
+
+    Params
+    ------
+    config_name: str
+        Name of the config attribute. E.g. 'op_config' or 'resource_config'
+    function_node: ast.FunctionDef
+        Node to parse through
+
+    Returns
+    -------
+    config_field_names: List[str]
+        Names of all of the accessed config in the function body
+    """
     output = []
 
     for possible_dict_access in ast.walk(function_node):
@@ -15,23 +30,5 @@ def get_config_field_names(
             and possible_dict_access.value.attr == config_name
         ):
             output.append(possible_dict_access.slice.value.value)
-
-    return output
-
-
-def get_resource_names(function_node: ast.FunctionDef) -> List[str]:
-    output = []
-
-    for possible_resource_access in ast.walk(function_node):
-
-        if (
-            isinstance(possible_resource_access, ast.Attribute)
-            and hasattr(possible_resource_access, "value")
-            and hasattr(possible_resource_access.value, "attr")
-            and possible_resource_access.value.attr == "resources"
-            and possible_resource_access.value.value.id == "context"
-        ):
-
-            output.append(possible_resource_access.attr)
 
     return output

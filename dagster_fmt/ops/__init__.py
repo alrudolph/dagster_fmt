@@ -1,57 +1,45 @@
 import ast
 from typing import List, Tuple
 
-from shared.insert import InsertText
-from shared.read_context import get_config_field_names, get_resource_names
+from dagster_fmt.shared.create_decorator import create_config, get_decorator_node
+from dagster_fmt.shared.insert import InsertText
+from dagster_fmt.shared.read_context import get_config_field_names
 
 
-def is_op_node(node) -> bool:
-    # the hastattr makes sure not to include ops with some
-    # config already
-    return isinstance(node, ast.FunctionDef) and any(
-        [hasattr(n, "id") and "op" == n.id for n in node.decorator_list]
-    )
+def get_resource_names(function_node: ast.FunctionDef) -> List[str]:
+    """Get the names of the resources being used.
 
+    Params
+    ------
+    function_node: ast.FunctionDef
+        Node to parse through
 
-def get_op_decorator_node(node: ast.FunctionDef):
+    Returns
+    -------
+    resource_names: List[str]
+        Names of the resource being used by `context.resources.[resource_name]`
+    """
+    output = []
 
-    for decorator in node.decorator_list:
+    for possible_resource_access in ast.walk(function_node):
 
-        if decorator.id == "op":
-            return decorator
+        if (
+            isinstance(possible_resource_access, ast.Attribute)
+            and hasattr(possible_resource_access, "value")
+            and hasattr(possible_resource_access.value, "attr")
+            and possible_resource_access.value.attr == "resources"
+            and possible_resource_access.value.value.id == "context"
+        ):
+            output.append(possible_resource_access.attr)
+
+    return output
 
 
 def create_required_resource_keys(resources: List[str]) -> str:
     if len(resources) == 0:
-        return "", False
+        return ""
 
-    return 'required_resource_keys={"' + '","'.join(resources) + '"},', True
-
-
-def create_op_config(config_names: List[str], config) -> Tuple[Tuple[str, str], bool]:
-    if len(config_names) == 0:
-        return "", False
-
-    # > add `import dagster`
-    # > add is_required, default_value on creation but not on update
-
-    desc = 'description="", ' if config.ops.add_descriptions else ""
-    is_req = "is_required=True, " if config.ops.add_is_required else ""
-
-    return (
-        (
-            "config_schema={"
-            + ",".join(
-                [
-                    f'"{c}": Field(config=dagster.Any, {desc}{is_req}default_value=None)'
-                    for c in config_names
-                ]
-            )
-            + "},",
-            "import dagster\nfrom dagster import Field\n",
-        ),
-        True,
-    )
+    return 'required_resource_keys={"' + '","'.join(resources) + '"},'
 
 
 def get_op_ins(node: ast.FunctionDef) -> List[str]:
@@ -224,14 +212,16 @@ def add_op_decorator(node: ast.FunctionDef, config, first_node):
     # get existing config
     #
 
-    decorator_node = get_op_decorator_node(node)
+    decorator_node = get_decorator_node("op", node)
 
     i_str, include = create_op_ins(get_op_ins(node), config)
     if include:
         output.append(InsertText.after_node(i_str[0], decorator_node))
         output.append(InsertText.before_node(i_str[1], first_node))
 
-    c_str, include = create_op_config(get_config_field_names("op_config", node), config)
+    c_str, include = create_config(
+        get_config_field_names("op_config", node), config.ops
+    )
     if include:
         output.append(InsertText.after_node(c_str[0], decorator_node))
         output.append(InsertText.before_node(c_str[1], first_node))
@@ -241,8 +231,8 @@ def add_op_decorator(node: ast.FunctionDef, config, first_node):
         output.append(InsertText.after_node(o_str[0], decorator_node))
         output.append(InsertText.before_node(o_str[1], first_node))
 
-    r_str, include = create_required_resource_keys(get_resource_names(node))
-    if include:
+    r_str = create_required_resource_keys(get_resource_names(node))
+    if r_str != "":
         output.append(InsertText.after_node(r_str, decorator_node))
 
     return [
